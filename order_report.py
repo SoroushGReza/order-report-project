@@ -5,9 +5,10 @@ import pandas as pd
 from order_reporting.config import ReportConfig
 from order_reporting.processing import prepare_orders
 from order_reporting.reporting import create_reports
+from order_reporting.validation import validate_orders
 
 
-def main():
+def main() -> int:
     project_root = Path(__file__).resolve().parent
 
     config = ReportConfig(
@@ -19,23 +20,9 @@ def main():
 
     try:
         data = pd.read_csv(config.input_path)
-
-        required = {
-            "order_id",
-            "order_date",
-            "customer_id",
-            "region",
-            "product_category",
-            "quantity",
-            "unit_price",
-            "discount",
-            "returned",
-        }
-
-        if not required.issubset(data.columns):
-            raise Exception("Fel data")
-
         print("Läste in", len(data), "rader")
+
+        validate_orders(data)
 
         data = prepare_orders(data)
         reports = create_reports(data)
@@ -49,11 +36,13 @@ def main():
             )
             print("Sparade", filename)
 
-        print("Klart")
+    except (OSError, ValueError, pd.errors.ParserError) as error:
+        print("Körningen misslyckades:", error)
+        return 1
 
-    except Exception as error:
-        print("Något gick fel:", error)
+    print("Klart")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
